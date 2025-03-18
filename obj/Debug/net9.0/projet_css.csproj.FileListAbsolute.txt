@@ -64,3 +64,4 @@
 /Users/admin/projet_css/obj/Debug/net9.0/projet_css.csproj.Up2Date
 /Users/admin/projet_css/obj/Debug/net9.0/projet_css.genruntimeconfig.cache
 /Users/admin/projet_css/obj/Debug/net9.0/ref/projet_css.dll
+/Users/admin/projet_css/obj/Debug/net9.0/projet_css.sourcelink.json

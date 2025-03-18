@@ -109,12 +109,26 @@ class Program
         Grid.SetRow(selectedPriceText, 1);
         Grid.SetColumn(selectedPriceText, 1);
 
+        var totalText = new TextBlock
+        {
+            Text = "",
+            HorizontalAlignment = HorizontalAlignment.Right, // Move to the right
+            Margin = new Thickness(10,10,890,10) // Adjusted margin to move the text upwards
+        };
+
         borderGrid.Children.Add(produitHeader);
         borderGrid.Children.Add(prixHeader);
         borderGrid.Children.Add(selectedProductsScrollViewer);
         borderGrid.Children.Add(selectedPriceText);
 
-        border.Child = borderGrid;
+        var borderScrollViewer = new ScrollViewer
+        {
+            Content = borderGrid,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Margin = new Thickness(10)
+        };
+
+        border.Child = borderScrollViewer;
 
         var grid = new UniformGrid
         {
@@ -201,8 +215,6 @@ class Program
         addProductPanel.Children.Add(addProductTextBox);
         addProductPanel.Children.Add(addProductPriceTextBox);
         addProductPanel.Children.Add(addProductButton);
-
-        
         
 
         var mainStackPanel = new StackPanel();
@@ -216,26 +228,47 @@ class Program
             HorizontalAlignment = HorizontalAlignment.Left
         };
 
-        var numericKeypad = CreateNumericKeypad(keypadInputText);
-        Grid.SetRow(numericKeypad, 1);
-        Grid.SetColumnSpan(numericKeypad, 2);
+        var removeProductButton = new Button
+        {
+            Content = "Effacer",
+            Margin = new Thickness(4, 90, 10, 10), // Adjusted margin to move the button downwards
+            Width = 100, // Increase button width
+            Height = 150  // Increase button height
+        };
 
-        // Remove the keypadInputText from the grid
-        // Grid.SetRow(keypadInputText, 1);
-        // Grid.SetColumn(keypadInputText, 1);
+        removeProductButton.Click += (sender, e) =>
+        {
+            if (selectedProducts.Count > 0)
+            {
+                selectedProducts.RemoveAt(selectedProducts.Count - 1);
+                UpdateSelectedProductsText(selectedProducts, selectedProductsText, selectedPriceText);
+            }
+        };
+
+        var numericKeypad = CreateNumericKeypad(keypadInputText, totalText, selectedProducts);
+        Grid.SetRow(numericKeypad, 1);
+        Grid.SetColumn(numericKeypad, 0);
+
+        Grid.SetRow(removeProductButton, 1);
+        Grid.SetColumn(removeProductButton, 1);
 
         mainGrid.Children.Add(mainStackPanel);
         mainGrid.Children.Add(border);
         mainGrid.Children.Add(numericKeypad);
-        // mainGrid.Children.Add(keypadInputText); // Remove the TextBlock from the main grid
+        mainGrid.Children.Add(removeProductButton); // Add the remove button next to the numeric keypad
+
+        Grid.SetRow(totalText, 2);
+        Grid.SetColumn(totalText, 0);
+        Grid.SetColumnSpan(totalText, 2);
+        mainGrid.Children.Add(totalText); // Add the total text just below the border
 
         window.Content = mainGrid;
         return window;
     }
 
-    private static Button multiplyButton;
+    private static Button? multiplyButton;
 
-    private static Grid CreateNumericKeypad(TextBlock keypadInputText)
+    private static Grid CreateNumericKeypad(TextBlock keypadInputText, TextBlock totalText, ObservableCollection<(string Name, double Price)> selectedProducts)
     {
         var keypadGrid = new Grid
         {
@@ -293,6 +326,18 @@ class Program
                                 btn.Content = $"{quantity} *"; // Display the number and * in the button
                                 quantityBuilder.Clear();
                             }
+                        }
+                        else if (content == "=")
+                        {
+                            // Calculate total and number of items
+                            double totalPrice = 0;
+                            int totalItems = 0;
+                            foreach (var product in selectedProducts)
+                            {
+                                totalPrice += product.Price;
+                                totalItems++;
+                            }
+                            totalText.Text = $"Total: {totalPrice:C}, Articles: {totalItems}";
                         }
                         else
                         {
