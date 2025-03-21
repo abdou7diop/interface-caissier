@@ -12,14 +12,10 @@ namespace projet_css;
 
 class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) => BuildAvaloniaApp()
         .StartWithClassicDesktopLifetime(args);
 
-    // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
@@ -27,19 +23,19 @@ class Program
             .LogToTrace()
             .AfterSetup(_ => CreateMainWindow().Show());
 
-    private static Window CreateMainWindow()
+    public static Window CreateMainWindow() // Change to public static
     {
         var window = new Window
         {
             Title = "Produits Alimentaires",
             Width = 800,
             Height = 600,
-            Background = Brushes.Violet
+            Background = Brushes.Gray
         };
 
         var mainGrid = new Grid();
         mainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
-        mainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Add a new row for the numeric keypad
+        mainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         mainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         mainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
 
@@ -47,18 +43,18 @@ class Program
         {
             BorderBrush = Brushes.Black,
             BorderThickness = new Thickness(2),
-            Width = 300, // Reduced width of the border
-            Height = 455, // Reduced height of the border
-            Margin = new Thickness(0, 20, 750, 0), // Adjusted margin to move the border upwards
+            Width = 300,
+            Height = 455,
+            Margin = new Thickness(0, 20, 750, 0),
             HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top // Align the border to the top
+            VerticalAlignment = VerticalAlignment.Top
         };
         Grid.SetColumn(border, 1);
 
         var borderGrid = new Grid();
         borderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         borderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        borderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star)); // Changed to Star to allow scrolling
+        borderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
         borderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         borderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
@@ -112,8 +108,8 @@ class Program
         var totalText = new TextBlock
         {
             Text = "",
-            HorizontalAlignment = HorizontalAlignment.Right, // Move to the right
-            Margin = new Thickness(10,10,890,10) // Adjusted margin to move the text upwards
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(10, 10, 890, 10)
         };
 
         borderGrid.Children.Add(produitHeader);
@@ -156,7 +152,7 @@ class Program
                 Content = produit.Name,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Margin = new Thickness(5),
-                Width = 100 // Increase button width
+                Width = 100
             };
             button.Click += (sender, e) =>
             {
@@ -215,7 +211,6 @@ class Program
         addProductPanel.Children.Add(addProductTextBox);
         addProductPanel.Children.Add(addProductPriceTextBox);
         addProductPanel.Children.Add(addProductButton);
-        
 
         var mainStackPanel = new StackPanel();
         mainStackPanel.Children.Add(addProductPanel);
@@ -231,9 +226,10 @@ class Program
         var removeProductButton = new Button
         {
             Content = "Effacer",
-            Margin = new Thickness(4, 90, 10, 10), // Adjusted margin to move the button downwards
-            Width = 100, // Increase button width
-            Height = 150  // Increase button height
+            Margin = new Thickness(4, 90, 10, 10),
+            Width = 100,
+            Height = 150,
+            Background = Brushes.LightGreen
         };
 
         removeProductButton.Click += (sender, e) =>
@@ -245,22 +241,175 @@ class Program
             }
         };
 
-        var numericKeypad = CreateNumericKeypad(keypadInputText, totalText, selectedProducts);
+        var printTicketButton = new Button
+        {
+            Content = "Imprimer \nle \nticket",
+            Margin = new Thickness(4, 90, 10, 10),
+            Width = 100,
+            Height = 150,
+            Background = Brushes.LightBlue,
+            IsEnabled = false // Initially disabled
+        };
+
+        printTicketButton.Click += (sender, e) =>
+        {
+            var dialog = new Window
+            {
+                Title = "Information",
+                Width = 300,
+                Height = 150,
+                Content = new TextBlock
+                {
+                    Text = "Ticket imprimé !",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            dialog.ShowDialog(window);
+        };
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(10)
+        };
+        buttonPanel.Children.Add(removeProductButton);
+        buttonPanel.Children.Add(printTicketButton);
+
+        Grid.SetRow(buttonPanel, 1);
+        Grid.SetColumn(buttonPanel, 1);
+
+        mainGrid.Children.Add(buttonPanel);
+
+        var carteButton = new Button
+        {
+            Content = "Carte",
+            Margin = new Thickness(5),
+            Width = 100,
+            Height = 70,
+            Background = Brushes.BlueViolet,
+            IsEnabled = false // Initially disabled
+        };
+
+        carteButton.Click += (sender, e) =>
+        {
+            printTicketButton.IsEnabled = true; // Enable the print button
+            var dialog = new Window
+            {
+                Title = "Paiement par Carte",
+                Width = 400,
+                Height = 200
+            };
+
+            var dialogContent = new StackPanel
+            {
+                Margin = new Thickness(10),
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = $"Vous devez payer : {totalText.Text}",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(5)
+                    },
+                    new Button
+                    {
+                        Content = "OK",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(5),
+                        Width = 100
+                    }
+                }
+            };
+
+            var okButton = (Button)dialogContent.Children[1];
+            okButton.Click += (s, ev) => dialog.Close(); // Close the dialog on "OK" click
+
+            dialog.Content = dialogContent;
+            dialog.ShowDialog(window);
+        };
+
+        var especesButton = new Button
+        {
+            Content = "Espèces",
+            Margin = new Thickness(5),
+            Width = 100,
+            Height = 70,
+            Background = Brushes.Red,
+            IsEnabled = false // Initially disabled
+        };
+
+        especesButton.Click += (sender, e) =>
+        {
+            printTicketButton.IsEnabled = true; // Enable the print button
+            var dialog = new Window
+            {
+                Title = "Paiement en Espèces",
+                Width = 400,
+                Height = 200
+            };
+
+            var dialogContent = new StackPanel
+            {
+                Margin = new Thickness(10),
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = $"Vous devez payer : {totalText.Text}",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(5)
+                    },
+                    new Button
+                    {
+                        Content = "OK",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(5),
+                        Width = 100
+                    }
+                }
+            };
+
+            var okButton = (Button)dialogContent.Children[1];
+            okButton.Click += (s, ev) => dialog.Close(); // Close the dialog on "OK" click
+
+            dialog.Content = dialogContent;
+            dialog.ShowDialog(window);
+        };
+
+        var paymentButtonsPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 15, 500, 0) // Adjusted margin to move left
+        };
+
+        paymentButtonsPanel.Children.Add(carteButton);
+        paymentButtonsPanel.Children.Add(especesButton);
+
+        Grid.SetRow(paymentButtonsPanel, 0);
+        Grid.SetColumn(paymentButtonsPanel, 1);
+        mainGrid.Children.Add(paymentButtonsPanel);
+
+        var numericKeypad = CreateNumericKeypad(keypadInputText, totalText, selectedProducts, carteButton, especesButton);
         Grid.SetRow(numericKeypad, 1);
         Grid.SetColumn(numericKeypad, 0);
 
-        Grid.SetRow(removeProductButton, 1);
-        Grid.SetColumn(removeProductButton, 1);
-
-        mainGrid.Children.Add(mainStackPanel);
-        mainGrid.Children.Add(border);
         mainGrid.Children.Add(numericKeypad);
-        mainGrid.Children.Add(removeProductButton); // Add the remove button next to the numeric keypad
 
         Grid.SetRow(totalText, 2);
         Grid.SetColumn(totalText, 0);
         Grid.SetColumnSpan(totalText, 2);
-        mainGrid.Children.Add(totalText); // Add the total text just below the border
+        mainGrid.Children.Add(totalText);
+
+        mainGrid.Children.Add(border); // Ensure the border is added to the main grid
+        Grid.SetColumn(border, 1);
+
+        mainGrid.Children.Add(mainStackPanel); // Ensure the product grid is added to the main grid
+        Grid.SetRow(mainStackPanel, 0);
+        Grid.SetColumn(mainStackPanel, 0);
 
         window.Content = mainGrid;
         return window;
@@ -268,7 +417,7 @@ class Program
 
     private static Button? multiplyButton;
 
-    private static Grid CreateNumericKeypad(TextBlock keypadInputText, TextBlock totalText, ObservableCollection<(string Name, double Price)> selectedProducts)
+    private static Grid CreateNumericKeypad(TextBlock keypadInputText, TextBlock totalText, ObservableCollection<(string Name, double Price)> selectedProducts, Button carteButton, Button especesButton)
     {
         var keypadGrid = new Grid
         {
@@ -290,7 +439,7 @@ class Program
             "1", "2", "3",
             "4", "5", "6",
             "7", "8", "9",
-            "0", "*", "=" // Added multiplication and equals buttons
+            "0", "*", "="
         };
 
         var quantityBuilder = new StringBuilder();
@@ -304,8 +453,8 @@ class Program
                 {
                     Content = buttons[index],
                     Margin = new Thickness(5),
-                    Width = 100, // Increase button size
-                    Height = 50  // Increase button size
+                    Width = 100,
+                    Height = 50
                 };
                 if (buttons[index] == "*")
                 {
@@ -318,18 +467,15 @@ class Program
                         var content = btn.Content.ToString();
                         if (content == "*")
                         {
-                            // Handle multiplication
                             if (int.TryParse(quantityBuilder.ToString(), out int quantity) && quantity > 0)
                             {
-                                // Store the quantity for multiplication
                                 SelectedQuantity = quantity;
-                                btn.Content = $"{quantity} *"; // Display the number and * in the button
+                                btn.Content = $"{quantity} *";
                                 quantityBuilder.Clear();
                             }
                         }
                         else if (content == "=")
                         {
-                            // Calculate total and number of items
                             double totalPrice = 0;
                             int totalItems = 0;
                             foreach (var product in selectedProducts)
@@ -337,14 +483,13 @@ class Program
                                 totalPrice += product.Price;
                                 totalItems++;
                             }
-                            totalText.Text = $"Total: {totalPrice:C}, Articles: {totalItems}";
+                            totalText.Text = $"Total : {totalPrice:C}, Articles : {totalItems}";
+                            carteButton.IsEnabled = true; // Enable the Carte button
+                            especesButton.IsEnabled = true; // Enable the Espèces button
                         }
                         else
                         {
-                            // Append the number to the quantity builder
                             quantityBuilder.Append(content);
-                            // Remove the line that updates keypadInputText
-                            // keypadInputText.Text = quantityBuilder.ToString();
                         }
                     }
                 };
@@ -370,7 +515,7 @@ class Program
             totalPrice += product.Price;
         }
         selectedProductsText.Text = sb.ToString();
-        selectedPriceText.Text = $"Total: {totalPrice:C}";
+        selectedPriceText.Text = $"Total : {totalPrice:C}";
     }
 
     private static void AddProduct(ObservableCollection<(string Name, double Price)> selectedProducts, (string Name, double Price) product)
@@ -379,10 +524,10 @@ class Program
         {
             selectedProducts.Add(product);
         }
-        SelectedQuantity = 1; // Reset quantity after adding
+        SelectedQuantity = 1;
         if (multiplyButton != null)
         {
-            multiplyButton.Content = "*"; // Reset the multiply button content
+            multiplyButton.Content = "*";
         }
     }
 }
