@@ -7,14 +7,19 @@ using Avalonia.Controls.Primitives;
 using System;
 using System.Collections.ObjectModel;
 using System.Text;
-
-namespace projet_css;
+using projet_css;
 
 class Program
 {
+    private static DatabaseManager dbManager = new DatabaseManager();
+
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        dbManager.InitializeDatabase(); // Initialize the database
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        dbManager.CloseDatabase(); // Close the database
+    }
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
@@ -133,16 +138,7 @@ class Program
             Margin = new Thickness(10),
         };
 
-        var produits = new ObservableCollection<(string Name, double Price)>
-        {
-            ("Pomme", 1.0), ("Banane", 0.5), ("Carotte", 0.3), ("Beignet", 1.2), ("Oeuf", 0.2),
-            ("Fromage", 2.5), ("Pain", 1.5), ("Lait", 1.0), ("Yaourt", 0.8), ("Poulet", 5.0),
-            ("Poisson", 4.0), ("Riz", 1.0), ("Pâtes", 1.2), ("Tomate", 0.7), ("Salade", 0.5),
-            ("Orange", 0.6), ("Citron", 0.4), ("Fraise", 2.0), ("Raisin", 2.5), ("Poire", 1.0),
-            ("Chocolat", 1.5), ("Café", 3.0), ("Thé", 2.0), ("Sucre", 0.8), ("Sel", 0.2),
-            ("Poivre", 0.3), ("Huile", 3.5), ("Beurre", 2.0), ("Miel", 4.0), ("Confiture", 3.0)
-        };
-
+        var produits = dbManager.GetProducts(); // Récupérer les produits depuis la base de données
         var selectedProducts = new ObservableCollection<(string Name, double Price)>();
 
         foreach (var produit in produits)
@@ -251,36 +247,7 @@ class Program
             IsEnabled = false // Initially disabled
         };
 
-        printTicketButton.Click += (sender, e) =>
-        {
-            var dialog = new Window
-            {
-                Title = "Information",
-                Width = 300,
-                Height = 150,
-                Content = new TextBlock
-                {
-                    Text = "Ticket imprimé !",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-            dialog.ShowDialog(window);
-        };
-
-        var buttonPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(10)
-        };
-        buttonPanel.Children.Add(removeProductButton);
-        buttonPanel.Children.Add(printTicketButton);
-
-        Grid.SetRow(buttonPanel, 1);
-        Grid.SetColumn(buttonPanel, 1);
-
-        mainGrid.Children.Add(buttonPanel);
+        string paymentMode = "Non spécifié"; // Default payment mode
 
         var carteButton = new Button
         {
@@ -295,6 +262,7 @@ class Program
         carteButton.Click += (sender, e) =>
         {
             printTicketButton.IsEnabled = true; // Enable the print button
+            paymentMode = "Carte"; // Set payment mode
             var dialog = new Window
             {
                 Title = "Paiement par Carte",
@@ -343,6 +311,7 @@ class Program
         especesButton.Click += (sender, e) =>
         {
             printTicketButton.IsEnabled = true; // Enable the print button
+            paymentMode = "Espèces"; // Set payment mode
             var dialog = new Window
             {
                 Title = "Paiement en Espèces",
@@ -378,20 +347,149 @@ class Program
             dialog.ShowDialog(window);
         };
 
-        var paymentButtonsPanel = new StackPanel
+        var clearAllButton = new Button
         {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 15, 500, 0) // Adjusted margin to move left
+            Content = "Tout Effacer",
+            Margin = new Thickness(5),
+            Width = 210,
+            Height = 70,
+            Background = Brushes.Orange
         };
 
-        paymentButtonsPanel.Children.Add(carteButton);
-        paymentButtonsPanel.Children.Add(especesButton);
+        clearAllButton.Click += (sender, e) =>
+        {
+            selectedProducts.Clear(); // Clear all added products
+            UpdateSelectedProductsText(selectedProducts, selectedProductsText, selectedPriceText); // Update UI
+            totalText.Text = ""; // Reset total text
+            carteButton.IsEnabled = false; // Disable Carte button
+            especesButton.IsEnabled = false; // Disable Espèces button
+            printTicketButton.IsEnabled = false; // Disable Print Ticket button
+        };
+
+        var paymentButtonsPanel = new StackPanel
+        {
+            Orientation = Orientation.Vertical, // Stack vertically for alignment
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 15, 500, 0)
+        };
+
+        var paymentRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, // Align Carte and Espèces horizontally
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        paymentRow.Children.Add(carteButton);
+        paymentRow.Children.Add(especesButton);
+
+        paymentButtonsPanel.Children.Add(paymentRow); // Add Carte and Espèces at the same level
+        paymentButtonsPanel.Children.Add(clearAllButton); // Add Tout Effacer below
 
         Grid.SetRow(paymentButtonsPanel, 0);
         Grid.SetColumn(paymentButtonsPanel, 1);
         mainGrid.Children.Add(paymentButtonsPanel);
+
+        printTicketButton.Click += (sender, e) =>
+        {
+            var sb = new StringBuilder();
+            double totalPrice = 0;
+            int totalItems = 0;
+
+            foreach (var product in selectedProducts)
+            {
+                sb.AppendLine($"{product.Name} - {product.Price:C}");
+                totalPrice += product.Price;
+                totalItems++;
+            }
+
+            string ticketDetails = sb.ToString();
+
+            var dialog = new Window
+            {
+                Title = "Ticket",
+                Width = 300,
+                Height = 500,
+                Content = new ScrollViewer
+                {
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Content = new StackPanel
+                    {
+                        Margin = new Thickness(10),
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "--AIDA SHOP-- ",
+                                FontWeight = FontWeight.Bold,
+                                Margin = new Thickness(0, 0, 0, 10)
+                            },
+                            new TextBlock
+                            {
+                                Text = ticketDetails,
+                                TextWrapping = TextWrapping.Wrap
+                            },
+                            new TextBlock
+                            {
+                                Text = $"Total : {totalPrice:C}",
+                                FontWeight = FontWeight.Bold,
+                                Margin = new Thickness(0, 10, 0, 0)
+                            },
+                            new TextBlock
+                            {
+                                Text = $"Nombre d'articles : {totalItems}",
+                                FontWeight = FontWeight.Bold
+                            },
+                            new TextBlock
+                            {
+                                Text = $"Mode de paiement : {paymentMode}",
+                                FontWeight = FontWeight.Bold,
+                                Margin = new Thickness(0, 10, 0, 0)
+                            },
+                            new Button
+                            {
+                                Content = "Sauvegarder",
+                                Margin = new Thickness(0, 10, 0, 0),
+                                Background = Brushes.LightGreen,
+                                HorizontalAlignment = HorizontalAlignment.Center
+                            }
+                        }
+                    }
+                }
+            };
+
+            var saveButton = dialog.Content is ScrollViewer scrollViewer &&
+                             scrollViewer.Content is StackPanel stackPanel &&
+                             stackPanel.Children.Count > 5 &&
+                             stackPanel.Children[5] is Button button
+                ? button
+                : null;
+
+            if (saveButton == null)
+            {
+                Console.WriteLine("Save button could not be found.");
+                return;
+            }
+            saveButton.Click += (s, ev) =>
+            {
+                dialog.Close(); // Close the dialog after saving
+            };
+            dialog.ShowDialog(window);
+        };
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(10)
+        };
+        buttonPanel.Children.Add(removeProductButton);
+        buttonPanel.Children.Add(printTicketButton);
+
+        Grid.SetRow(buttonPanel, 1);
+        Grid.SetColumn(buttonPanel, 1);
+
+        mainGrid.Children.Add(buttonPanel);
 
         var numericKeypad = CreateNumericKeypad(keypadInputText, totalText, selectedProducts, carteButton, especesButton);
         Grid.SetRow(numericKeypad, 1);
